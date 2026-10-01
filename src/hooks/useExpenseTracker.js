@@ -46,16 +46,27 @@ export const useExpenseTracker = () => {
     fetchData();
   }, [fetchData]);
 
-  const addExpense = async (data) => {
-    try {
-      const newExp = await api.addExpense(data);
-      setExpenses((prev) => [newExp, ...prev]);
-      showToast('Expense saved to Google Sheets!');
-    } catch (err) {
-      showToast('Failed to save expense', 'error');
-      throw err;
+  const addExpense = async (expenseData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/expenses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(expenseData),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      // Re-fetch all expenses directly from server to ensure sync
+      await fetchExpenses(); 
+    } else {
+      throw new Error(result.error);
     }
-  };
+  } catch (err) {
+    console.error('Failed to add expense:', err);
+    throw err;
+  }
+};
 
   const updateExpense = async (id, data) => {
     try {
