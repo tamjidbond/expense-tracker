@@ -2,25 +2,47 @@ import React, { useState } from 'react';
 import { formatCurrency } from '../utils/formatters';
 import { Search, Plus, Trash2, Edit2 } from 'lucide-react';
 
-export const ExpensesPage = ({ expenses, categories, selectedMonth, onAdd, onEdit, onDelete }) => {
+export const ExpensesPage = ({
+  expenses = [],
+  categories = [],
+  selectedMonth = '',
+  onAdd,
+  onEdit,
+  onDelete,
+}) => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedPayment, setSelectedPayment] = useState('ALL');
   const [sortOrder, setSortOrder] = useState('newest');
 
   const filtered = expenses.filter((e) => {
-    const matchesMonth = e.month === selectedMonth;
-    const matchesSearch = e.item.toLowerCase().includes(search.toLowerCase());
+    // 1. Safe month matching (falls back to e.date if e.month is missing)
+    const expenseMonth = e.month || (e.date ? e.date.substring(0, 7) : '');
+    const matchesMonth = selectedMonth ? expenseMonth === selectedMonth : true;
+
+    // 2. Safe string searching (prevents .toLowerCase() on undefined)
+    const itemText = (e.item || '').toLowerCase();
+    const notesText = (e.notes || '').toLowerCase();
+    const queryText = (search || '').toLowerCase();
+    const matchesSearch = itemText.includes(queryText) || notesText.includes(queryText);
+
+    // 3. Category & Payment method matching
     const matchesCategory = selectedCategory === 'ALL' || e.category === selectedCategory;
     const matchesPayment = selectedPayment === 'ALL' || e.paymentMethod === selectedPayment;
+
     return matchesMonth && matchesSearch && matchesCategory && matchesPayment;
   });
 
   const sorted = [...filtered].sort((a, b) => {
-    if (sortOrder === 'newest') return new Date(b.date).getTime() - new Date(a.date).getTime();
-    if (sortOrder === 'oldest') return new Date(a.date).getTime() - new Date(b.date).getTime();
-    if (sortOrder === 'highest') return b.amount - a.amount;
-    if (sortOrder === 'lowest') return a.amount - b.amount;
+    const timeA = a.date ? new Date(a.date).getTime() : 0;
+    const timeB = b.date ? new Date(b.date).getTime() : 0;
+    const amountA = parseFloat(a.amount) || 0;
+    const amountB = parseFloat(b.amount) || 0;
+
+    if (sortOrder === 'newest') return timeB - timeA;
+    if (sortOrder === 'oldest') return timeA - timeB;
+    if (sortOrder === 'highest') return amountB - amountA;
+    if (sortOrder === 'lowest') return amountA - amountB;
     return 0;
   });
 
@@ -44,7 +66,7 @@ export const ExpensesPage = ({ expenses, categories, selectedMonth, onAdd, onEdi
           <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
           <input
             type="text"
-            placeholder="Search item..."
+            placeholder="Search item or notes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"
@@ -74,6 +96,7 @@ export const ExpensesPage = ({ expenses, categories, selectedMonth, onAdd, onEdi
           <option value="Cash">Cash</option>
           <option value="Bank Transfer">Bank Transfer</option>
           <option value="Mobile Payment">Mobile Payment</option>
+          <option value="Other">Other</option>
         </select>
 
         <select
@@ -108,10 +131,10 @@ export const ExpensesPage = ({ expenses, categories, selectedMonth, onAdd, onEdi
                   <td className="px-4 py-3 font-semibold text-slate-800">{exp.item}</td>
                   <td className="px-4 py-3">
                     <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-medium">
-                      {exp.category}
+                      {exp.category || 'Uncategorized'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{exp.paymentMethod}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{exp.paymentMethod || 'N/A'}</td>
                   <td className="px-4 py-3 text-right font-bold text-slate-900">{formatCurrency(exp.amount)}</td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
