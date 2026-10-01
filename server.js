@@ -19,7 +19,16 @@ const auth = new google.auth.JWT({
 const sheets = google.sheets({ version: 'v4', auth });
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID;
 
-// GET Expenses in server.js
+// Helper function to safely extract numbers from string/currency inputs
+const parseAmount = (val) => {
+  if (typeof val === 'number') return val;
+  if (!val) return 0;
+  const cleaned = String(val).replace(/[^0-9.-]/g, '');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+};
+
+// GET Expenses
 app.get('/api/expenses', async (req, res) => {
   try {
     const response = await sheets.spreadsheets.values.get({
@@ -28,18 +37,23 @@ app.get('/api/expenses', async (req, res) => {
     });
 
     const rows = response.data.values || [];
-    const expenses = rows.map((row) => ({
-      id: row[0],
-      date: row[1],
-      item: row[2],
-      category: row[3],
-      amount: parseFloat(row[4]) || 0, // <-- Parse float here
-      paymentMethod: row[5],
-      notes: row[6] || '',
-      month: row[7],
-      createdAt: row[8],
-      updatedAt: row[9],
-    }));
+    const expenses = rows.map((row) => {
+      const dateStr = row[1] || '';
+      const fallbackMonth = dateStr ? dateStr.substring(0, 7) : new Date().toISOString().substring(0, 7);
+
+      return {
+        id: row[0] || `TXN${Date.now()}`,
+        date: dateStr,
+        item: row[2] || '',
+        category: row[3] || 'Food',
+        amount: parseAmount(row[4]),
+        paymentMethod: row[5] || 'Card',
+        notes: row[6] || '',
+        month: row[7] || fallbackMonth,
+        createdAt: row[8] || '',
+        updatedAt: row[9] || '',
+      };
+    });
 
     res.json({ success: true, data: expenses });
   } catch (err) {
@@ -52,20 +66,24 @@ app.post('/api/expenses', async (req, res) => {
   try {
     const { date, item, category, amount, paymentMethod, notes } = req.body;
     const id = `TXN${Date.now()}`;
+    const numAmount = parseAmount(amount);
     const month = date ? date.substring(0, 7) : new Date().toISOString().substring(0, 7);
     const now = new Date().toISOString();
 
-    const values = [[id, date, item, category, amount, paymentMethod, notes || '', month, now, now]];
+    const values = [[id, date, item, category, numAmount, paymentMethod, notes || '', month, now, now]];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Expenses!A1', // Use A1 as anchor for appending
+      range: 'Expenses!A1',
       valueInputOption: 'USER_ENTERED',
-      insertDataOption: 'INSERT_ROWS', // Force inserting a new row
+      insertDataOption: 'INSERT_ROWS',
       requestBody: { values },
     });
 
-    res.json({ success: true, data: { id, date, item, category, amount, paymentMethod, notes, month, createdAt: now, updatedAt: now } });
+    res.json({
+      success: true,
+      data: { id, date, item, category, amount: numAmount, paymentMethod, notes, month, createdAt: now, updatedAt: now },
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -86,18 +104,20 @@ app.put('/api/expenses/:id', async (req, res) => {
     const targetRow = rowIndex + 2;
     const current = rows[rowIndex];
     const { date, item, category, amount, paymentMethod, notes } = req.body;
-    const updatedMonth = (date || current[1]).substring(0, 7);
+    const updatedDate = date || current[1];
+    const updatedMonth = updatedDate ? updatedDate.substring(0, 7) : new Date().toISOString().substring(0, 7);
+    const updatedAmount = amount !== undefined ? parseAmount(amount) : parseAmount(current[4]);
 
     const values = [[
       id,
-      date || current[1],
+      updatedDate,
       item || current[2],
       category || current[3],
-      amount !== undefined ? amount : current[4],
+      updatedAmount,
       paymentMethod || current[5],
       notes !== undefined ? notes : current[6],
       updatedMonth,
-      current[8],
+      current[8] || new Date().toISOString(),
       new Date().toISOString(),
     ]];
 
@@ -149,7 +169,7 @@ app.get('/api/budgets', async (req, res) => {
     const budgets = rows.map((row) => ({
       id: row[0] || '',
       month: row[1] || '',
-      amount: parseFloat(row[2] || 0),
+      amount: parseAmount(row[2]),
       createdAt: row[3] || '',
       updatedAt: row[4] || '',
       notes: row[5] || '',
@@ -164,6 +184,7 @@ app.get('/api/budgets', async (req, res) => {
 app.post('/api/budgets', async (req, res) => {
   try {
     const { month, amount, notes } = req.body;
+    const numAmount = parseAmount(amount);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: 'Budgets!A2:F',
@@ -175,7 +196,7 @@ app.post('/api/budgets', async (req, res) => {
     if (existingIndex !== -1) {
       const targetRow = existingIndex + 2;
       const current = rows[existingIndex];
-      const values = [[current[0], month, amount, current[3], now, notes || current[5] || '']];
+      const values = [[current[0], month, numAmount, current[3], now, notes || current[5] || '']];
 
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
@@ -183,10 +204,10 @@ app.post('/api/budgets', async (req, res) => {
         valueInputOption: 'USER_ENTERED',
         requestBody: { values },
       });
-      return res.json({ success: true, data: { id: current[0], month, amount, notes } });
+      return res.json({ success: true, data: { id: current[0], month, amount: numAmount, notes } });
     } else {
       const id = `BUD${month.replace('-', '')}`;
-      const values = [[id, month, amount, now, now, notes || '']];
+      const values = [[id, month, numAmount, now, now, notes || '']];
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
@@ -194,7 +215,7 @@ app.post('/api/budgets', async (req, res) => {
         valueInputOption: 'USER_ENTERED',
         requestBody: { values },
       });
-      return res.json({ success: true, data: { id, month, amount, notes } });
+      return res.json({ success: true, data: { id, month, amount: numAmount, notes } });
     }
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -212,7 +233,7 @@ app.get('/api/categories', async (req, res) => {
     const categories = rows.map((row) => ({
       name: row[0] || '',
       active: row[1] === 'TRUE' || row[1] === 'true' || row[1] === '1',
-      monthlyLimit: parseFloat(row[2] || 0),
+      monthlyLimit: parseAmount(row[2]),
       color: row[3] || '#10B981',
       notes: row[4] || '',
     }));

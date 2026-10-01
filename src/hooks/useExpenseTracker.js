@@ -25,8 +25,8 @@ export const useExpenseTracker = () => {
         api.getBudgets(),
         api.getCategories(),
       ]);
-      setExpenses(expData);
-      setBudgets(budData);
+      setExpenses(expData || []);
+      setBudgets(budData || []);
       setCategories(catData.length ? catData : [
         { name: 'Food', color: '#10B981' },
         { name: 'Groceries', color: '#3B82F6' },
@@ -47,32 +47,24 @@ export const useExpenseTracker = () => {
   }, [fetchData]);
 
   const addExpense = async (expenseData) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/expenses`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(expenseData),
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      // Re-fetch all expenses directly from server to ensure sync
-      await fetchExpenses(); 
-    } else {
-      throw new Error(result.error);
+    try {
+      const newExpense = await api.addExpense(expenseData);
+      setExpenses((prev) => [newExpense, ...prev]);
+      showToast('Expense added successfully!');
+      await fetchData(); // Safely re-fetch to ensure sync with Google Sheets
+    } catch (err) {
+      console.error('Failed to add expense:', err);
+      showToast('Failed to add expense', 'error');
+      throw err;
     }
-  } catch (err) {
-    console.error('Failed to add expense:', err);
-    throw err;
-  }
-};
+  };
 
   const updateExpense = async (id, data) => {
     try {
       await api.updateExpense(id, data);
       setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)));
       showToast('Expense updated!');
+      await fetchData();
     } catch (err) {
       showToast('Failed to update expense', 'error');
       throw err;
@@ -84,6 +76,7 @@ export const useExpenseTracker = () => {
       await api.deleteExpense(id);
       setExpenses((prev) => prev.filter((e) => e.id !== id));
       showToast('Expense removed!');
+      await fetchData();
     } catch (err) {
       showToast('Failed to delete expense', 'error');
       throw err;
@@ -103,6 +96,7 @@ export const useExpenseTracker = () => {
         return [...prev, saved];
       });
       showToast('Monthly budget updated!');
+      await fetchData();
     } catch (err) {
       showToast('Failed to save budget', 'error');
       throw err;
