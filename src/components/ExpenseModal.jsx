@@ -6,7 +6,7 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
   const [item, setItem] = useState('');
   const [category, setCategory] = useState('');
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Card');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +24,7 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
       setItem('');
       setCategory(categories?.[0]?.name || 'Food');
       setAmount('');
-      setPaymentMethod('Card');
+      setPaymentMethod('Cash');
       setNotes('');
     }
   }, [initialData, categories, isOpen]);
@@ -113,7 +113,7 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Payment Method</label>
               <select
-                value={paymentMethod || 'Card'}
+                value={paymentMethod || 'Cash'}
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 bg-white"
               >
