@@ -1,27 +1,36 @@
 export const calculateBudgetMetrics = (expenses = [], budget = null, selectedMonth = '') => {
-  // 1. Fallback for selectedMonth if missing or invalid
   const safeSelectedMonth = selectedMonth || new Date().toISOString().substring(0, 7);
+  const todayStr = new Date().toISOString().substring(0, 10); // 'YYYY-MM-DD'
 
-  // 2. Filter expenses for the target month (with fallback checking e.date)
+  // Filter expenses for selected month
   const monthExpenses = expenses.filter((e) => {
-    const expenseMonth = e.month || (e.date ? e.date.substring(0, 7) : '');
+    const expenseMonth = e.month || (e.date ? String(e.date).substring(0, 7) : '');
     return expenseMonth === safeSelectedMonth;
   });
 
-  // 3. Calculate total spent with robust Number parsing
+  // Calculate Today's Spent across expenses matching today's date
+  const todaySpent = expenses.reduce((sum, e) => {
+    if (!e.date) return sum;
+    const cleanDate = String(e.date).split('T')[0].trim();
+    if (cleanDate === todayStr) {
+      const amt = parseFloat(e.amount);
+      return sum + (isNaN(amt) ? 0 : amt);
+    }
+    return sum;
+  }, 0);
+
+  // Total spent for the month
   const totalSpent = monthExpenses.reduce((sum, e) => {
     const amt = parseFloat(e.amount);
     return sum + (isNaN(amt) ? 0 : amt);
   }, 0);
 
-  // 4. Extract monthly budget safely
   const parsedBudget = budget ? parseFloat(budget.amount) : 0;
   const monthlyBudget = isNaN(parsedBudget) ? 0 : parsedBudget;
-
   const remainingBudget = monthlyBudget - totalSpent;
   const budgetUtilization = monthlyBudget > 0 ? (totalSpent / monthlyBudget) * 100 : 0;
 
-  // 5. Date and days calculation safely
+  // Date parsing
   const [yearStr, monthStr] = safeSelectedMonth.split('-');
   const year = parseInt(yearStr, 10) || new Date().getFullYear();
   const monthIndex = (parseInt(monthStr, 10) || (new Date().getMonth() + 1)) - 1;
@@ -44,9 +53,7 @@ export const calculateBudgetMetrics = (expenses = [], budget = null, selectedMon
     daysRemaining = totalDaysInMonth;
   }
 
-  const dailyAverage = daysElapsed > 0 ? totalSpent / daysElapsed : 0;
-
-  // 6. Recommended daily limit handling
+  // Recommended Daily Spending Limit
   let recommendedDailyLimit = 0;
   if (remainingBudget < 0) {
     recommendedDailyLimit = 'Budget exceeded';
@@ -56,7 +63,14 @@ export const calculateBudgetMetrics = (expenses = [], budget = null, selectedMon
     recommendedDailyLimit = remainingBudget / daysRemaining;
   }
 
-  // 7. Budget health status colors
+  // Today's Budget Remaining
+  let todayBudgetLeft = 0;
+  if (typeof recommendedDailyLimit === 'number') {
+    todayBudgetLeft = recommendedDailyLimit - todaySpent;
+  } else {
+    todayBudgetLeft = recommendedDailyLimit;
+  }
+
   let budgetStatus = 'green';
   if (budgetUtilization >= 100) budgetStatus = 'red';
   else if (budgetUtilization >= 90) budgetStatus = 'orange';
@@ -65,11 +79,12 @@ export const calculateBudgetMetrics = (expenses = [], budget = null, selectedMon
   return {
     monthlyBudget,
     totalSpent,
+    todaySpent,
+    todayBudgetLeft,
     remainingBudget,
     budgetUtilization,
     daysElapsed,
     daysRemaining,
-    dailyAverage,
     recommendedDailyLimit,
     totalTransactions: monthExpenses.length,
     budgetStatus,

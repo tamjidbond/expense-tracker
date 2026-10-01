@@ -16,13 +16,13 @@ export const DashboardPage = ({
   const currentBudget = budgets.find((b) => b.month === selectedMonth);
   const metrics = calculateBudgetMetrics(expenses, currentBudget, selectedMonth);
 
-  // 1. Safe Month Filtering (checks e.month OR derives from e.date)
+  // Safe Month Filtering
   const monthExpenses = expenses.filter((e) => {
     const expMonth = e.month || (e.date ? String(e.date).substring(0, 7) : '');
     return expMonth === selectedMonth;
   });
 
-  // 2. Safe Days-in-Month Calculation
+  // Safe Days-in-Month Calculation
   const daysInMonth = selectedMonth.includes('-')
     ? new Date(
         parseInt(selectedMonth.split('-')[0], 10),
@@ -31,7 +31,7 @@ export const DashboardPage = ({
       ).getDate()
     : 30;
 
-  // 3. Robust Daily Chart Data Aggregation
+  // Daily Chart Aggregation
   const dailyChartData = Array.from({ length: daysInMonth }, (_, i) => {
     const dayNum = i + 1;
     const dayStr = String(dayNum).padStart(2, '0');
@@ -39,12 +39,8 @@ export const DashboardPage = ({
 
     const dayTotal = monthExpenses.reduce((sum, e) => {
       if (!e.date) return sum;
-      
-      // Clean date string (strip time portion if ISO format)
       const cleanExpDate = String(e.date).split('T')[0].trim();
-      
-      // Support matching '2026-10-01' or '2026-10-1'
-      const [y, m, d] = cleanExpDate.split('-');
+      const [, , d] = cleanExpDate.split('-');
       const expDayNum = parseInt(d, 10);
 
       if (cleanExpDate === fullDateStr || expDayNum === dayNum) {
@@ -57,7 +53,7 @@ export const DashboardPage = ({
     return { day: dayNum, amount: dayTotal };
   });
 
-  // 4. Category Breakdown Aggregation
+  // Category Breakdown Aggregation
   const categoryTotals = {};
   monthExpenses.forEach((e) => {
     const cat = e.category || 'Other';
@@ -105,11 +101,12 @@ export const DashboardPage = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Top Metrics Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Monthly Budget</p>
           <p className="text-xl font-bold text-slate-900 mt-1">{formatCurrency(metrics.monthlyBudget)}</p>
-          <p className="text-xs text-slate-400 mt-2">Target</p>
+          <p className="text-xs text-slate-400 mt-2">Target Limit</p>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
@@ -133,8 +130,29 @@ export const DashboardPage = ({
           </p>
           <p className="text-xs text-slate-400 mt-2">{metrics.daysRemaining} days remaining</p>
         </div>
+
+        <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-100 shadow-sm">
+          <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Today's Spent</p>
+          <p className="text-xl font-bold text-emerald-950 mt-1">{formatCurrency(metrics.todaySpent)}</p>
+          <p className="text-xs text-emerald-600 mt-2">Spent today</p>
+        </div>
+
+        <div className={`p-4 rounded-xl border shadow-sm ${
+          typeof metrics.todayBudgetLeft === 'number' && metrics.todayBudgetLeft < 0
+            ? 'bg-rose-50/60 border-rose-200 text-rose-800'
+            : 'bg-indigo-50/60 border-indigo-100 text-indigo-900'
+        }`}>
+          <p className="text-xs font-semibold uppercase tracking-wider">Today's Budget Left</p>
+          <p className="text-xl font-bold mt-1">
+            {typeof metrics.todayBudgetLeft === 'number'
+              ? formatCurrency(metrics.todayBudgetLeft)
+              : metrics.todayBudgetLeft}
+          </p>
+          <p className="text-xs mt-2 opacity-80">Remaining for today</p>
+        </div>
       </div>
 
+      {/* Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -173,6 +191,7 @@ export const DashboardPage = ({
         </div>
       </div>
 
+      {/* Recent Transactions Table */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-800">Recent Transactions</h3>
