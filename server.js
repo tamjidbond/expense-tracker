@@ -19,26 +19,28 @@ const auth = new google.auth.JWT({
 const sheets = google.sheets({ version: 'v4', auth });
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID;
 
-// GET Expenses
+// GET Expenses in server.js
 app.get('/api/expenses', async (req, res) => {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: 'Expenses!A2:J',
     });
+
     const rows = response.data.values || [];
     const expenses = rows.map((row) => ({
-      id: row[0] || '',
-      date: row[1] || '',
-      item: row[2] || '',
-      category: row[3] || '',
-      amount: parseFloat(row[4] || 0),
-      paymentMethod: row[5] || 'Cash',
+      id: row[0],
+      date: row[1],
+      item: row[2],
+      category: row[3],
+      amount: parseFloat(row[4]) || 0, // <-- Parse float here
+      paymentMethod: row[5],
       notes: row[6] || '',
-      month: row[7] || (row[1] ? row[1].substring(0, 7) : ''),
-      createdAt: row[8] || '',
-      updatedAt: row[9] || '',
+      month: row[7],
+      createdAt: row[8],
+      updatedAt: row[9],
     }));
+
     res.json({ success: true, data: expenses });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -57,8 +59,9 @@ app.post('/api/expenses', async (req, res) => {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Expenses!A:J',
+      range: 'Expenses!A1', // Use A1 as anchor for appending
       valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS', // Force inserting a new row
       requestBody: { values },
     });
 

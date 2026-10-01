@@ -1,11 +1,15 @@
 const CURRENCY_SYMBOL = import.meta.env.VITE_CURRENCY_SYMBOL || '৳';
 
 export const formatCurrency = (amount) => {
-  if (isNaN(amount) || amount === null || amount === undefined) return `${CURRENCY_SYMBOL}0`;
-  return `${CURRENCY_SYMBOL}${Number(amount).toLocaleString('en-US', {
+  const numericAmount = parseFloat(amount);
+  if (isNaN(numericAmount)) return '৳0';
+  
+  return new Intl.NumberFormat('bn-BD', {
+    style: 'currency',
+    currency: 'BDT',
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  })}`;
+  }).format(numericAmount).replace('BDT', '৳');
 };
 
 export const getMonthName = (yearMonth) => {

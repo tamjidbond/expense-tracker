@@ -1,14 +1,30 @@
-export const calculateBudgetMetrics = (expenses = [], budget, selectedMonth) => {
-  const monthExpenses = expenses.filter((e) => e.month === selectedMonth);
-  const totalSpent = monthExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-  const monthlyBudget = budget ? Number(budget.amount) || 0 : 0;
-  const remainingBudget = monthlyBudget - totalSpent;
+export const calculateBudgetMetrics = (expenses = [], budget = null, selectedMonth = '') => {
+  // 1. Fallback for selectedMonth if missing or invalid
+  const safeSelectedMonth = selectedMonth || new Date().toISOString().substring(0, 7);
 
+  // 2. Filter expenses for the target month (with fallback checking e.date)
+  const monthExpenses = expenses.filter((e) => {
+    const expenseMonth = e.month || (e.date ? e.date.substring(0, 7) : '');
+    return expenseMonth === safeSelectedMonth;
+  });
+
+  // 3. Calculate total spent with robust Number parsing
+  const totalSpent = monthExpenses.reduce((sum, e) => {
+    const amt = parseFloat(e.amount);
+    return sum + (isNaN(amt) ? 0 : amt);
+  }, 0);
+
+  // 4. Extract monthly budget safely
+  const parsedBudget = budget ? parseFloat(budget.amount) : 0;
+  const monthlyBudget = isNaN(parsedBudget) ? 0 : parsedBudget;
+
+  const remainingBudget = monthlyBudget - totalSpent;
   const budgetUtilization = monthlyBudget > 0 ? (totalSpent / monthlyBudget) * 100 : 0;
 
-  const [yearStr, monthStr] = selectedMonth.split('-');
-  const year = parseInt(yearStr, 10);
-  const monthIndex = parseInt(monthStr, 10) - 1;
+  // 5. Date and days calculation safely
+  const [yearStr, monthStr] = safeSelectedMonth.split('-');
+  const year = parseInt(yearStr, 10) || new Date().getFullYear();
+  const monthIndex = (parseInt(monthStr, 10) || (new Date().getMonth() + 1)) - 1;
 
   const now = new Date();
   const isCurrentMonth = now.getFullYear() === year && now.getMonth() === monthIndex;
@@ -30,6 +46,7 @@ export const calculateBudgetMetrics = (expenses = [], budget, selectedMonth) => 
 
   const dailyAverage = daysElapsed > 0 ? totalSpent / daysElapsed : 0;
 
+  // 6. Recommended daily limit handling
   let recommendedDailyLimit = 0;
   if (remainingBudget < 0) {
     recommendedDailyLimit = 'Budget exceeded';
@@ -39,6 +56,7 @@ export const calculateBudgetMetrics = (expenses = [], budget, selectedMonth) => 
     recommendedDailyLimit = remainingBudget / daysRemaining;
   }
 
+  // 7. Budget health status colors
   let budgetStatus = 'green';
   if (budgetUtilization >= 100) budgetStatus = 'red';
   else if (budgetUtilization >= 90) budgetStatus = 'orange';
