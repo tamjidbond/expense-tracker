@@ -17,7 +17,7 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
       setItem(initialData.item || '');
       setCategory(initialData.category || '');
       setAmount(initialData.amount !== undefined && initialData.amount !== null ? String(initialData.amount) : '');
-      setPaymentMethod(initialData.paymentMethod || 'Card');
+      setPaymentMethod(initialData.paymentMethod || 'Cash');
       setNotes(initialData.notes || '');
     } else {
       setDate(new Date().toISOString().substring(0, 10));
