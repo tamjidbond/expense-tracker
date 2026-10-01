@@ -15,8 +15,14 @@ export const DashboardPage = ({
 }) => {
   const currentBudget = budgets.find((b) => b.month === selectedMonth);
   const metrics = calculateBudgetMetrics(expenses, currentBudget, selectedMonth);
-  const monthExpenses = expenses.filter((e) => e.month === selectedMonth);
 
+  // 1. Safe Month Filtering (checks e.month OR derives from e.date)
+  const monthExpenses = expenses.filter((e) => {
+    const expMonth = e.month || (e.date ? String(e.date).substring(0, 7) : '');
+    return expMonth === selectedMonth;
+  });
+
+  // 2. Safe Days-in-Month Calculation
   const daysInMonth = selectedMonth.includes('-')
     ? new Date(
         parseInt(selectedMonth.split('-')[0], 10),
@@ -25,18 +31,38 @@ export const DashboardPage = ({
       ).getDate()
     : 30;
 
+  // 3. Robust Daily Chart Data Aggregation
   const dailyChartData = Array.from({ length: daysInMonth }, (_, i) => {
-    const dayStr = String(i + 1).padStart(2, '0');
-    const dateStr = `${selectedMonth}-${dayStr}`;
-    const dayTotal = monthExpenses
-      .filter((e) => e.date === dateStr)
-      .reduce((sum, e) => sum + (e.amount || 0), 0);
-    return { day: i + 1, amount: dayTotal };
+    const dayNum = i + 1;
+    const dayStr = String(dayNum).padStart(2, '0');
+    const fullDateStr = `${selectedMonth}-${dayStr}`;
+
+    const dayTotal = monthExpenses.reduce((sum, e) => {
+      if (!e.date) return sum;
+      
+      // Clean date string (strip time portion if ISO format)
+      const cleanExpDate = String(e.date).split('T')[0].trim();
+      
+      // Support matching '2026-10-01' or '2026-10-1'
+      const [y, m, d] = cleanExpDate.split('-');
+      const expDayNum = parseInt(d, 10);
+
+      if (cleanExpDate === fullDateStr || expDayNum === dayNum) {
+        const amt = parseFloat(e.amount);
+        return sum + (isNaN(amt) ? 0 : amt);
+      }
+      return sum;
+    }, 0);
+
+    return { day: dayNum, amount: dayTotal };
   });
 
+  // 4. Category Breakdown Aggregation
   const categoryTotals = {};
   monthExpenses.forEach((e) => {
-    categoryTotals[e.category] = (categoryTotals[e.category] || 0) + (e.amount || 0);
+    const cat = e.category || 'Other';
+    const amt = parseFloat(e.amount) || 0;
+    categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
   });
 
   const categoryChartData = Object.keys(categoryTotals).map((cat) => {
