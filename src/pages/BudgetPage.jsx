@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getMonthName } from '../utils/formatters';
 import { Save } from 'lucide-react';
 
-export const BudgetPage = ({ budgets, selectedMonth, onSaveBudget }) => {
+export const BudgetPage = ({ budgets = [], selectedMonth = '', onSaveBudget }) => {
   const currentBudget = budgets.find((b) => b.month === selectedMonth);
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
@@ -10,7 +10,7 @@ export const BudgetPage = ({ budgets, selectedMonth, onSaveBudget }) => {
 
   useEffect(() => {
     if (currentBudget) {
-      setAmount(String(currentBudget.amount));
+      setAmount(currentBudget.amount !== undefined && currentBudget.amount !== null ? String(currentBudget.amount) : '');
       setNotes(currentBudget.notes || '');
     } else {
       setAmount('');
@@ -44,7 +44,7 @@ export const BudgetPage = ({ budgets, selectedMonth, onSaveBudget }) => {
             <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Select Month</label>
             <input
               type="month"
-              value={selectedMonth}
+              value={selectedMonth || ''}
               disabled
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium"
             />
@@ -55,7 +55,7 @@ export const BudgetPage = ({ budgets, selectedMonth, onSaveBudget }) => {
             <input
               type="number"
               placeholder="e.g. 50000"
-              value={amount}
+              value={amount || ''}
               onChange={(e) => setAmount(e.target.value)}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-lg font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
               required
@@ -67,7 +67,7 @@ export const BudgetPage = ({ budgets, selectedMonth, onSaveBudget }) => {
             <textarea
               rows={3}
               placeholder="Budget objectives..."
-              value={notes}
+              value={notes || ''}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none"
             />

@@ -5,10 +5,10 @@ import { Plus, ArrowUpRight, TrendingUp } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const DashboardPage = ({
-  expenses,
-  budgets,
-  categories,
-  selectedMonth,
+  expenses = [],
+  budgets = [],
+  categories = [],
+  selectedMonth = '',
   setSelectedMonth,
   onOpenAddModal,
   onNavigateToExpenses,
@@ -17,24 +17,26 @@ export const DashboardPage = ({
   const metrics = calculateBudgetMetrics(expenses, currentBudget, selectedMonth);
   const monthExpenses = expenses.filter((e) => e.month === selectedMonth);
 
-  const daysInMonth = new Date(
-    parseInt(selectedMonth.split('-')[0]),
-    parseInt(selectedMonth.split('-')[1]),
-    0
-  ).getDate();
+  const daysInMonth = selectedMonth.includes('-')
+    ? new Date(
+        parseInt(selectedMonth.split('-')[0], 10),
+        parseInt(selectedMonth.split('-')[1], 10),
+        0
+      ).getDate()
+    : 30;
 
   const dailyChartData = Array.from({ length: daysInMonth }, (_, i) => {
     const dayStr = String(i + 1).padStart(2, '0');
     const dateStr = `${selectedMonth}-${dayStr}`;
     const dayTotal = monthExpenses
       .filter((e) => e.date === dateStr)
-      .reduce((sum, e) => sum + e.amount, 0);
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
     return { day: i + 1, amount: dayTotal };
   });
 
   const categoryTotals = {};
   monthExpenses.forEach((e) => {
-    categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
+    categoryTotals[e.category] = (categoryTotals[e.category] || 0) + (e.amount || 0);
   });
 
   const categoryChartData = Object.keys(categoryTotals).map((cat) => {
@@ -64,7 +66,7 @@ export const DashboardPage = ({
         <div className="flex items-center gap-3">
           <input
             type="month"
-            value={selectedMonth}
+            value={selectedMonth || ''}
             onChange={(e) => setSelectedMonth(e.target.value)}
             className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-emerald-500"
           />
@@ -90,7 +92,7 @@ export const DashboardPage = ({
           <p className="text-xs text-slate-400 mt-2">{metrics.totalTransactions} transactions</p>
         </div>
 
-        <div className={`p-4 rounded-xl border shadow-sm ${statusColors[metrics.budgetStatus]}`}>
+        <div className={`p-4 rounded-xl border shadow-sm ${statusColors[metrics.budgetStatus] || statusColors.green}`}>
           <p className="text-xs font-semibold uppercase tracking-wider">Remaining Budget</p>
           <p className="text-xl font-bold mt-1">{formatCurrency(metrics.remainingBudget)}</p>
           <p className="text-xs mt-2 font-medium">{metrics.budgetUtilization.toFixed(1)}% used</p>
@@ -158,7 +160,7 @@ export const DashboardPage = ({
             <div key={exp.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-slate-100 rounded-lg text-slate-600 text-xs font-semibold">
-                  {exp.category.substring(0, 3).toUpperCase()}
+                  {exp.category ? exp.category.substring(0, 3).toUpperCase() : 'EXP'}
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-800">{exp.item}</p>

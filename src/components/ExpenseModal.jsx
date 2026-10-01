@@ -13,16 +13,16 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
 
   useEffect(() => {
     if (initialData) {
-      setDate(initialData.date);
-      setItem(initialData.item);
-      setCategory(initialData.category);
-      setAmount(String(initialData.amount));
-      setPaymentMethod(initialData.paymentMethod);
+      setDate(initialData.date || '');
+      setItem(initialData.item || '');
+      setCategory(initialData.category || '');
+      setAmount(initialData.amount !== undefined && initialData.amount !== null ? String(initialData.amount) : '');
+      setPaymentMethod(initialData.paymentMethod || 'Card');
       setNotes(initialData.notes || '');
     } else {
       setDate(new Date().toISOString().substring(0, 10));
       setItem('');
-      setCategory(categories[0]?.name || 'Food');
+      setCategory(categories?.[0]?.name || 'Food');
       setAmount('');
       setPaymentMethod('Card');
       setNotes('');
@@ -75,7 +75,7 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
             <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Date</label>
             <input
               type="date"
-              value={date}
+              value={date || ''}
               onChange={(e) => setDate(e.target.value)}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800"
               required
@@ -87,7 +87,7 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
             <input
               type="text"
               placeholder="e.g. Grocery Store"
-              value={item}
+              value={item || ''}
               onChange={(e) => setItem(e.target.value)}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800"
               required
@@ -98,11 +98,11 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Category</label>
               <select
-                value={category}
+                value={category || ''}
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 bg-white"
               >
-                {categories.map((c) => (
+                {categories?.map((c) => (
                   <option key={c.name} value={c.name}>
                     {c.name}
                   </option>
@@ -113,7 +113,7 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Payment Method</label>
               <select
-                value={paymentMethod}
+                value={paymentMethod || 'Card'}
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 bg-white"
               >
@@ -132,7 +132,7 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
               type="number"
               step="0.01"
               placeholder="0.00"
-              value={amount}
+              value={amount || ''}
               onChange={(e) => setAmount(e.target.value)}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 font-semibold"
               required
@@ -144,7 +144,7 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
             <textarea
               rows={2}
               placeholder="Additional details..."
-              value={notes}
+              value={notes || ''}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 text-sm"
             />
