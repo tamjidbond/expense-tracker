@@ -117,8 +117,8 @@ export const ExpenseModal = ({ isOpen, onClose, onSubmit, initialData, categorie
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 bg-white"
               >
-                <option value="Card">Card</option>
                 <option value="Cash">Cash</option>
+                <option value="Card">Card</option>
                 <option value="Bank Transfer">Bank Transfer</option>
                 <option value="Mobile Payment">Mobile Payment</option>
                 <option value="Other">Other</option>
